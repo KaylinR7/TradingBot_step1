@@ -212,9 +212,6 @@ def main():
     print(f"Starting equity per instrument: ${STARTING_EQUITY:,.2f}")
     print(f"Slippage: {SLIPPAGE_PCT * 100:.2f}% per fill\n")
 
-    print("Running Mean Reversion backtest on US500...")
-    mr_trades, mr_df = run_mean_reversion_backtest(config.INSTRUMENTS["SPY_EQUIVALENT"])
-
     print("Running Momentum Breakout backtest on BTCUSD...")
     mom_trades, mom_df = run_momentum_backtest(config.INSTRUMENTS["BTC_EQUIVALENT"])
 
@@ -222,20 +219,16 @@ def main():
     trend_trades, trend_df = run_trend_backtest(config.INSTRUMENTS["GLD_EQUIVALENT"])
 
     results = {
-        "Mean Reversion (US500)": mr_trades,
         "Momentum Breakout (BTCUSD)": mom_trades,
         "Trend Following (XAUUSD)": trend_trades,
     }
 
     all_metrics = {label: calculate_metrics(trades, STARTING_EQUITY) for label, trades in results.items()}
 
-    # Combined portfolio: sum dollar P&L across all instruments as if run
-    # in parallel (see the scoping note at the top of this file re: what
-    # this does and doesn't capture about correlation).
     combined_pnl = pd.concat([t["dollar_pnl"] for t in results.values() if len(t) > 0])
     combined_trades_count = len(combined_pnl)
-    combined_return_pct = combined_pnl.sum() / (STARTING_EQUITY * 3) * 100  # 3x capital deployed total
-    print(f"\nCombined portfolio (sum of all 3, {STARTING_EQUITY * 3:,.0f} total capital deployed):")
+    combined_return_pct = combined_pnl.sum() / (STARTING_EQUITY * 2) * 100  # 2x capital deployed
+    print(f"\nCombined portfolio (sum of both strategies, {STARTING_EQUITY * 2:,.0f} total capital deployed):")
     print(f"  Total trades: {combined_trades_count}")
     print(f"  Total P&L: ${combined_pnl.sum():,.2f}")
     print(f"  Combined return: {combined_return_pct:.2f}%")

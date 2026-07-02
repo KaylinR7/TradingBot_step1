@@ -18,13 +18,24 @@ MT5_PATH = os.getenv("MT5_PATH", "")  # e.g. "C:\\Program Files\\IC Markets MT5 
 
 # --- Instrument mapping: original plan -> MT5 symbol on IC Markets ---
 # NOTE: exact symbol names can vary slightly by broker (e.g. "US500" vs "US500Cash").
-# We'll verify these against your terminal's Market Watch in step 1b.
+# Confirmed working on Kaylin's IC Markets demo (as of step 1 test):
 INSTRUMENTS = {
     "SPY_EQUIVALENT": "US500",     # S&P 500 index CFD -> mean reversion
-    "QQQ_EQUIVALENT": "NAS100",    # Nasdaq index CFD -> mean reversion
     "BTC_EQUIVALENT": "BTCUSD",    # Bitcoin CFD -> momentum breakout
     "GLD_EQUIVALENT": "XAUUSD",    # Gold -> trend following
-    "USO_EQUIVALENT": "USOIL",     # Crude oil -> trend following
+}
+
+# Strategies currently enabled for live/paper trading. Mean reversion is
+# disabled pending further research - backtesting (step 4) showed no edge
+# over a persistently trending 3-4 week test window even after adding a
+# hard stop loss, widening the entry threshold, and adding an ADX trend
+# filter. Rather than keep tuning parameters against the same small
+# dataset (which risks overfitting), it's parked until we can test it
+# against a longer/different period or a different instrument.
+ENABLED_STRATEGIES = {
+    "mean_reversion": False,   # US500 - disabled, see note above
+    "momentum_breakout": True,  # BTCUSD
+    "trend_following": True,    # XAUUSD
 }
 
 # --- Risk settings (used later in risk_manager.py) ---
