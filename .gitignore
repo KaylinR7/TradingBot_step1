@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+trades.csv
+daily_pnl.csv
+backtest_results.png
+.venv/
+venv/
