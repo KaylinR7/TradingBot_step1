@@ -1,17 +1,16 @@
 """
-Step 2 test: pull recent US500 history from MT5, run the mean reversion
-strategy, and simulate actual trades (entry only when flat, exit on
-reversion to the mean) so we can see realistic trade-level results.
+Step: pull recent BTCUSD 1-hour history from MT5 and run the momentum
+breakout strategy against it.
 
 Run with MT5 open and logged in:
-    python test_mean_reversion.py
+    python test_momentum_breakout.py
 """
 
 import MetaTrader5 as mt5
 import config
 from bot.data_feed import get_candles
-from bot.strategies.mean_reversion import run_strategy
-from bot.position_tracker import simulate_trades, summarize_trades
+from bot.strategies.momentum_breakout import run_strategy
+from bot.strategies.momentum_tracker import simulate_trades, summarize_trades
 
 
 def main():
@@ -19,13 +18,13 @@ def main():
         print("initialize() failed, error code =", mt5.last_error())
         return
 
-    symbol = config.INSTRUMENTS["SPY_EQUIVALENT"]  # US500
-    print(f"Fetching 15-minute candles for {symbol}...")
+    symbol = config.INSTRUMENTS["BTC_EQUIVALENT"]  # BTCUSD
+    print(f"Fetching 1-hour candles for {symbol}...")
 
-    df = get_candles(symbol, mt5.TIMEFRAME_M15, count=500)
+    df = get_candles(symbol, mt5.TIMEFRAME_H1, count=500)
     print(f"Got {len(df)} candles, from {df.index[0]} to {df.index[-1]}\n")
 
-    result = run_strategy(df, ma_period=20, entry_std=2.0, adx_threshold=25.0)
+    result = run_strategy(df, period=20, atr_period=14, volume_multiplier=1.5)
 
     raw_signal_count = (result["signal"] != 0).sum()
     print(f"Raw signal count (before position-state filtering): {raw_signal_count}\n")
