@@ -11,22 +11,10 @@ import config
 
 
 def connect():
-    # If MT5 terminal is already open and logged in, mt5.initialize() with
-    # no args will just attach to it. We pass login details too in case
-    # it needs to log in fresh.
-    if config.MT5_PATH:
-        ok = mt5.initialize(
-            path=config.MT5_PATH,
-            login=config.MT5_LOGIN,
-            password=config.MT5_PASSWORD,
-            server=config.MT5_SERVER,
-        )
-    else:
-        ok = mt5.initialize(
-            login=config.MT5_LOGIN,
-            password=config.MT5_PASSWORD,
-            server=config.MT5_SERVER,
-        )
+    # TEMP: attach to whatever's already logged into the running terminal,
+    # instead of passing login/password/server. This helps us isolate
+    # whether the issue is the terminal itself or the .env credentials.
+    ok = mt5.initialize()
 
     if not ok:
         print("initialize() failed, error code =", mt5.last_error())
@@ -54,7 +42,6 @@ def check_instruments():
                   f"Check the exact symbol name in your terminal (right-click Market Watch -> Show All).")
             continue
 
-        # Make sure it's visible/selected so we can pull quotes
         if not info.visible:
             mt5.symbol_select(symbol, True)
 
