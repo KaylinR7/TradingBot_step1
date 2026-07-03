@@ -39,5 +39,22 @@ ENABLED_STRATEGIES = {
 }
 
 # --- Risk settings (used later in risk_manager.py) ---
-RISK_PER_TRADE_PCT = 1.0        # max 1% of equity risked per trade
+RISK_PER_TRADE_PCT = 1.0        # default: max 1% of equity risked per trade
 MAX_PORTFOLIO_DRAWDOWN_PCT = 10.0  # circuit breaker
+
+# Per-instrument risk overrides. Some instruments have a large contract
+# size (e.g. XAUUSD = 100 oz/lot) which means the broker's minimum lot
+# already risks more than the default 1% on a small account. Rather than
+# raise risk globally (which would over-risk instruments that size fine),
+# we override just the ones that need it. Set back to 1.0 once the account
+# is large enough that the minimum lot fits within 1% risk.
+#   XAUUSD on a $1000 account: min lot 0.01 risks ~$42 at a ~42-point ATR
+#   stop = ~4.2% of equity, so 4.5% is the smallest override that fits.
+RISK_PER_TRADE_PCT_OVERRIDES = {
+    "XAUUSD": 4.5,
+}
+
+
+def get_risk_pct(symbol: str) -> float:
+    """Return the risk % for a given symbol, falling back to the default."""
+    return RISK_PER_TRADE_PCT_OVERRIDES.get(symbol, RISK_PER_TRADE_PCT)
