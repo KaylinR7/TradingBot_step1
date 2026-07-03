@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading Bot Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --panel: #121821;
+    --panel-hi: #1a2230;
+    --border: #232d3d;
+    --text: #d4dae3;
+    --text-dim: #6b7787;
+    --green: #26d07c;
+    --red: #ff5c5c;
+    --accent: #4a9eff;
+    --amber: #ffb340;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  header h1 .tick { color: var(--accent); }
+  .status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .status .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--red);
+    margin-right: 6px;
+  }
+  .status.live .dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .stat .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .stat .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 24px;
+    font-weight: 700;
+  }
+  .stat .sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .panel h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    font-weight: 600;
+  }
+
+  .cols { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .cols { grid-template-columns: 1fr; }
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    font-weight: 600;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 10px;
+    border-bottom: 1px solid var(--panel-hi);
+  }
+  tr:last-child td { border-bottom: none; }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .tag.long { background: rgba(38,208,124,0.15); color: var(--green); }
+  .tag.short { background: rgba(255,92,92,0.15); color: var(--red); }
+
+  .empty {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 30px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+  canvas { max-height: 260px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>trading<span class="tick">bot</span> // dashboard</h1>
+    <div class="status" id="status"><span class="dot"></span><span id="status-text">connecting…</span></div>
+  </header>
+
+  <div class="grid">
+    <div class="stat">
+      <div class="label">Equity</div>
+      <div class="value mono" id="equity">—</div>
+      <div class="sub" id="equity-sub">balance —</div>
+    </div>
+    <div class="stat">
+      <div class="label">Open P&L</div>
+      <div class="value mono" id="open-pnl">—</div>
+      <div class="sub" id="open-pnl-sub">unrealized</div>
+    </div>
+    <div class="stat">
+      <div class="label">Realized P&L</div>
+      <div class="value mono" id="realized-pnl">—</div>
+      <div class="sub" id="realized-sub">all trades</div>
+    </div>
+    <div class="stat">
+      <div class="label">Win Rate</div>
+      <div class="value mono" id="winrate">—</div>
+      <div class="sub" id="winrate-sub">— trades</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Open Positions</h2>
+    <div id="positions-wrap"><div class="empty">No open positions</div></div>
+  </div>
+
+  <div class="cols">
+    <div class="panel">
+      <h2>Equity Curve</h2>
+      <canvas id="equityChart"></canvas>
+      <div id="equity-empty" class="empty" style="display:none">No daily history yet — builds up as the bot runs across days</div>
+    </div>
+    <div class="panel">
+      <h2>Trade Stats</h2>
+      <table>
+        <tbody id="stats-body">
+          <tr><td>Total trades</td><td id="s-total" style="text-align:right">—</td></tr>
+          <tr><td>Wins / Losses</td><td id="s-wl" style="text-align:right">—</td></tr>
+          <tr><td>Avg win</td><td id="s-avgwin" style="text-align:right">—</td></tr>
+          <tr><td>Avg loss</td><td id="s-avgloss" style="text-align:right">—</td></tr>
+          <tr><td>Total P&L</td><td id="s-total-pnl" style="text-align:right">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Recent Trades</h2>
+    <div id="trades-wrap"><div class="empty">No trades logged yet</div></div>
+  </div>
+
+<script>
+const fmt = (n) => (n >= 0 ? '+' : '') + n.toFixed(2);
+const cls = (n) => n >= 0 ? 'pos' : 'neg';
+
+let equityChart = null;
+
+async function getJSON(url) {
+  try { const r = await fetch(url); return await r.json(); }
+  catch { return null; }
+}
+
+async function refresh() {
+  const acct = await getJSON('/api/account');
+  const statusEl = document.getElementById('status');
+  const statusText = document.getElementById('status-text');
+
+  if (acct && acct.connected) {
+    statusEl.classList.add('live');
+    statusText.textContent = `${acct.login} · ${acct.server} · ${acct.updated}`;
+    document.getElementById('equity').textContent = '$' + acct.equity.toFixed(2);
+    document.getElementById('equity-sub').textContent = 'balance $' + acct.balance.toFixed(2);
+    const op = document.getElementById('open-pnl');
+    op.textContent = fmt(acct.profit);
+    op.className = 'value mono ' + cls(acct.profit);
+  } else {
+    statusEl.classList.remove('live');
+    statusText.textContent = 'MT5 not connected — is the terminal open?';
+  }
+
+  const pos = await getJSON('/api/positions');
+  const pw = document.getElementById('positions-wrap');
+  if (pos && pos.positions && pos.positions.length) {
+    let html = '<table><thead><tr><th>Symbol</th><th>Side</th><th>Volume</th><th>Entry</th><th>Current</th><th>Stop</th><th style="text-align:right">P&L</th></tr></thead><tbody>';
+    for (const p of pos.positions) {
+      html += `<tr>
+        <td>${p.symbol}</td>
+        <td><span class="tag ${p.direction.toLowerCase()}">${p.direction}</span></td>
+        <td>${p.volume}</td>
+        <td>${p.entry_price}</td>
+        <td>${p.current_price}</td>
+        <td>${p.sl ?? '—'}</td>
+        <td style="text-align:right" class="${cls(p.profit)}">${fmt(p.profit)}</td>
+      </tr>`;
+    }
+    html += '</tbody></table>';
+    pw.innerHTML = html;
+  } else {
+    pw.innerHTML = '<div class="empty">No open positions</div>';
+  }
+
+  const tr = await getJSON('/api/trades');
+  if (tr && tr.stats) {
+    const s = tr.stats;
+    document.getElementById('realized-pnl').textContent = fmt(s.total_pnl);
+    document.getElementById('realized-pnl').className = 'value mono ' + cls(s.total_pnl);
+    document.getElementById('winrate').textContent = s.win_rate + '%';
+    document.getElementById('winrate-sub').textContent = s.total_trades + ' trades';
+    document.getElementById('s-total').textContent = s.total_trades;
+    document.getElementById('s-wl').innerHTML = `<span class="pos">${s.wins}</span> / <span class="neg">${s.losses}</span>`;
+    document.getElementById('s-avgwin').innerHTML = `<span class="pos">${fmt(s.avg_win)}</span>`;
+    document.getElementById('s-avgloss').innerHTML = `<span class="neg">${fmt(s.avg_loss)}</span>`;
+    document.getElementById('s-total-pnl').innerHTML = `<span class="${cls(s.total_pnl)}">${fmt(s.total_pnl)}</span>`;
+
+    const tw = document.getElementById('trades-wrap');
+    if (tr.trades && tr.trades.length) {
+      let html = '<table><thead><tr><th>Time</th><th>Symbol</th><th>Side</th><th>Entry</th><th>Exit</th><th>Size</th><th style="text-align:right">P&L</th><th>Reason</th></tr></thead><tbody>';
+      for (const t of tr.trades.slice(0, 20)) {
+        const pnl = t.profit_loss && t.profit_loss !== 'None' && t.profit_loss !== '' ? parseFloat(t.profit_loss) : null;
+        const time = (t.timestamp || '').replace('T', ' ').slice(0, 16);
+        html += `<tr>
+          <td>${time}</td>
+          <td>${t.symbol || ''}</td>
+          <td><span class="tag ${(t.direction||'').toLowerCase()}">${t.direction||''}</span></td>
+          <td>${t.entry_price || '—'}</td>
+          <td>${t.exit_price || '—'}</td>
+          <td>${t.position_size || '—'}</td>
+          <td style="text-align:right" class="${pnl===null?'':cls(pnl)}">${pnl===null?'open':fmt(pnl)}</td>
+          <td style="color:var(--text-dim)">${t.exit_reason || ''}</td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
+      tw.innerHTML = html;
+    }
+  }
+
+  const eq = await getJSON('/api/equity_curve');
+  if (eq && eq.points && eq.points.length) {
+    document.getElementById('equity-empty').style.display = 'none';
+    const labels = eq.points.map(p => p.date);
+    const data = eq.points.map(p => p.equity);
+    if (!equityChart) {
+      equityChart = new Chart(document.getElementById('equityChart'), {
+        type: 'line',
+        data: { labels, datasets: [{
+          data, borderColor: '#4a9eff', backgroundColor: 'rgba(74,158,255,0.08)',
+          fill: true, tension: 0.25, pointRadius: 2, borderWidth: 2,
+        }]},
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: '#1a2230' }, ticks: { color: '#6b7787', font: { family: 'JetBrains Mono', size: 10 } } },
+            y: { grid: { color: '#1a2230' }, ticks: { color: '#6b7787', font: { family: 'JetBrains Mono', size: 10 } } }
+          }
+        }
+      });
+    } else {
+      equityChart.data.labels = labels;
+      equityChart.data.datasets[0].data = data;
+      equityChart.update('none');
+    }
+  } else {
+    document.getElementById('equity-empty').style.display = 'block';
+  }
+}
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
